@@ -1,13 +1,16 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-require('dotenv').config();
+const sendNotificationMail = require("./utils/mailer");
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
+console.log("EMAIL_USER =", process.env.EMAIL_USER);
 
 // Middleware
 app.use(cors());
@@ -18,15 +21,15 @@ app.use(express.urlencoded({ extended: true }));
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/password-manager';
 
 mongoose.connect(MONGODB_URI)
-.then(() => console.log('✅ MongoDB connected successfully'))
-.catch(err => {
-    console.error('❌ MongoDB connection error:', err.message);
-    console.log('Please make sure MongoDB is running. You can start it with:');
-    console.log('1. Open Command Prompt as Administrator');
-    console.log('2. Run: net start MongoDB');
-    console.log('\nOr install MongoDB if not installed:');
-    console.log('https://www.mongodb.com/try/download/community');
-});
+    .then(() => console.log('✅ MongoDB connected successfully'))
+    .catch(err => {
+        console.error('❌ MongoDB connection error:', err.message);
+        console.log('Please make sure MongoDB is running. You can start it with:');
+        console.log('1. Open Command Prompt as Administrator');
+        console.log('2. Run: net start MongoDB');
+        console.log('\nOr install MongoDB if not installed:');
+        console.log('https://www.mongodb.com/try/download/community');
+    });
 
 // User Schema
 const userSchema = new mongoose.Schema({
@@ -102,28 +105,28 @@ const authenticate = async (req, res, next) => {
     try {
         const authHeader = req.header('Authorization');
         if (!authHeader) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'No token provided. Please login.' 
+            return res.status(401).json({
+                success: false,
+                message: 'No token provided. Please login.'
             });
         }
-        
+
         const token = authHeader.replace('Bearer ', '');
-        
+
         if (!token) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Invalid token format' 
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid token format'
             });
         }
 
         const decoded = jwt.verify(token, JWT_SECRET);
         const user = await User.findById(decoded.userId);
-        
+
         if (!user) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'User not found' 
+            return res.status(401).json({
+                success: false,
+                message: 'User not found'
             });
         }
 
@@ -132,9 +135,9 @@ const authenticate = async (req, res, next) => {
         next();
     } catch (error) {
         console.error('Authentication error:', error.message);
-        res.status(401).json({ 
-            success: false, 
-            message: 'Please login again' 
+        res.status(401).json({
+            success: false,
+            message: 'Please login again'
         });
     }
 };
@@ -143,8 +146,8 @@ const authenticate = async (req, res, next) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-    res.json({ 
-        success: true, 
+    res.json({
+        success: true,
         message: 'Server is running',
         timestamp: new Date().toISOString()
     });
@@ -152,28 +155,28 @@ app.get('/api/health', (req, res) => {
 
 // Test route
 app.get('/api/test', (req, res) => {
-    res.json({ 
-        success: true, 
-        message: 'Test route working' 
+    res.json({
+        success: true,
+        message: 'Test route working'
     });
 });
 
 // Register user
 app.post('/api/auth/register', async (req, res) => {
     try {
-        console.log('📝 Registration attempt received:', { 
+        console.log('📝 Registration attempt received:', {
             email: req.body.email,
-            name: req.body.name 
+            name: req.body.name
         });
-        
+
         const { name, email, password } = req.body;
 
         // Validation
         if (!name || !email || !password) {
             console.log('❌ Missing fields:', { name: !!name, email: !!email, password: !!password });
-            return res.status(400).json({ 
-                success: false, 
-                message: 'All fields are required' 
+            return res.status(400).json({
+                success: false,
+                message: 'All fields are required'
             });
         }
 
@@ -181,9 +184,9 @@ app.post('/api/auth/register', async (req, res) => {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             console.log('❌ Email already exists:', email);
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Email already registered' 
+            return res.status(400).json({
+                success: false,
+                message: 'Email already registered'
             });
         }
 
@@ -206,7 +209,7 @@ app.post('/api/auth/register', async (req, res) => {
             JWT_SECRET,
             { expiresIn: '7d' }
         );
-        
+
         res.status(201).json({
             success: true,
             message: 'User registered successfully',
@@ -219,10 +222,10 @@ app.post('/api/auth/register', async (req, res) => {
         });
     } catch (error) {
         console.error('❌ Registration error:', error.message);
-        res.status(500).json({ 
-            success: false, 
+        res.status(500).json({
+            success: false,
             message: 'Registration failed. Please try again.',
-            error: error.message 
+            error: error.message
         });
     }
 });
@@ -231,14 +234,14 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         console.log('🔑 Login attempt received:', { email: req.body.email });
-        
+
         const { email, password } = req.body;
 
         // Validation
         if (!email || !password) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Email and password are required' 
+            return res.status(400).json({
+                success: false,
+                message: 'Email and password are required'
             });
         }
 
@@ -246,9 +249,9 @@ app.post('/api/auth/login', async (req, res) => {
         const user = await User.findOne({ email });
         if (!user) {
             console.log('❌ User not found:', email);
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Invalid email or password' 
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid email or password'
             });
         }
 
@@ -256,9 +259,9 @@ app.post('/api/auth/login', async (req, res) => {
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             console.log('❌ Invalid password for:', email);
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Invalid email or password' 
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid email or password'
             });
         }
 
@@ -270,7 +273,7 @@ app.post('/api/auth/login', async (req, res) => {
         );
 
         console.log('✅ User logged in successfully:', user.email);
-        
+
         res.json({
             success: true,
             message: 'Login successful',
@@ -283,10 +286,10 @@ app.post('/api/auth/login', async (req, res) => {
         });
     } catch (error) {
         console.error('❌ Login error:', error.message);
-        res.status(500).json({ 
-            success: false, 
+        res.status(500).json({
+            success: false,
             message: 'Login failed. Please try again.',
-            error: error.message 
+            error: error.message
         });
     }
 });
@@ -297,17 +300,17 @@ app.post('/api/auth/change-password', authenticate, async (req, res) => {
         const { currentPassword, newPassword } = req.body;
 
         if (!currentPassword || !newPassword) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Both passwords are required' 
+            return res.status(400).json({
+                success: false,
+                message: 'Both passwords are required'
             });
         }
 
         const isPasswordValid = await bcrypt.compare(currentPassword, req.user.password);
         if (!isPasswordValid) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Current password is incorrect' 
+            return res.status(401).json({
+                success: false,
+                message: 'Current password is incorrect'
             });
         }
 
@@ -321,8 +324,8 @@ app.post('/api/auth/change-password', authenticate, async (req, res) => {
         });
     } catch (error) {
         console.error('Change password error:', error.message);
-        res.status(500).json({ 
-            success: false, 
+        res.status(500).json({
+            success: false,
             message: 'Failed to change password'
         });
     }
@@ -336,9 +339,9 @@ app.post('/api/passwords', authenticate, async (req, res) => {
         const { website, username, password, notes } = req.body;
 
         if (!website || !username || !password) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Website, username, and password are required' 
+            return res.status(400).json({
+                success: false,
+                message: 'Website, username, and password are required'
             });
         }
 
@@ -354,6 +357,13 @@ app.post('/api/passwords', authenticate, async (req, res) => {
 
         await newPassword.save();
 
+        // 📧 EMAIL NOTIFICATION
+        await sendNotificationMail({
+            to: req.user.email,
+            subject: "Password Added",
+            text: `A new password was added for ${website}.`
+        });
+
         res.status(201).json({
             success: true,
             message: 'Password saved successfully',
@@ -364,8 +374,8 @@ app.post('/api/passwords', authenticate, async (req, res) => {
         });
     } catch (error) {
         console.error('Create password error:', error.message);
-        res.status(500).json({ 
-            success: false, 
+        res.status(500).json({
+            success: false,
             message: 'Failed to save password'
         });
     }
@@ -388,8 +398,8 @@ app.get('/api/passwords', authenticate, async (req, res) => {
         });
     } catch (error) {
         console.error('Get passwords error:', error.message);
-        res.status(500).json({ 
-            success: false, 
+        res.status(500).json({
+            success: false,
             message: 'Failed to fetch passwords'
         });
     }
@@ -407,9 +417,9 @@ app.put('/api/passwords/:id', authenticate, async (req, res) => {
         });
 
         if (!existingPassword) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Password not found' 
+            return res.status(404).json({
+                success: false,
+                message: 'Password not found'
             });
         }
 
@@ -422,6 +432,13 @@ app.put('/api/passwords/:id', authenticate, async (req, res) => {
 
         await existingPassword.save();
 
+        // 📧 EMAIL NOTIFICATION
+        await sendNotificationMail({
+            to: req.user.email,
+            subject: "Password Updated",
+            text: `Your password for ${existingPassword.website} was updated.`
+        });
+
         res.json({
             success: true,
             message: 'Password updated successfully',
@@ -432,8 +449,8 @@ app.put('/api/passwords/:id', authenticate, async (req, res) => {
         });
     } catch (error) {
         console.error('Update password error:', error.message);
-        res.status(500).json({ 
-            success: false, 
+        res.status(500).json({
+            success: false,
             message: 'Failed to update password'
         });
     }
@@ -450,11 +467,19 @@ app.delete('/api/passwords/:id', authenticate, async (req, res) => {
         });
 
         if (!password) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Password not found' 
+            return res.status(404).json({
+                success: false,
+                message: 'Password not found'
             });
         }
+
+        // 📧 EMAIL NOTIFICATION
+        await sendNotificationMail({
+            to: req.user.email,
+            subject: "Password Deleted",
+            text: `Your password for ${password.website} was deleted.`
+        });
+
 
         res.json({
             success: true,
@@ -462,8 +487,8 @@ app.delete('/api/passwords/:id', authenticate, async (req, res) => {
         });
     } catch (error) {
         console.error('Delete password error:', error.message);
-        res.status(500).json({ 
-            success: false, 
+        res.status(500).json({
+            success: false,
             message: 'Failed to delete password'
         });
     }
@@ -483,8 +508,8 @@ app.get('/api/auth/profile', authenticate, async (req, res) => {
         });
     } catch (error) {
         console.error('Profile error:', error.message);
-        res.status(500).json({ 
-            success: false, 
+        res.status(500).json({
+            success: false,
             message: 'Failed to fetch profile'
         });
     }

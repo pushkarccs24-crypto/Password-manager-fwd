@@ -542,13 +542,13 @@
                 <div class="main-content">
                     <div class="sidebar">
                         <ul class="sidebar-menu">
-                            <li><a href="#" class="active" onclick="showSection('add-password')">
+                            <li><a href="#" onclick="showSection('add-password', this)">
                                 <i class="fas fa-plus-circle"></i> Add Password
                             </a></li>
-                            <li><a href="#" onclick="showSection('view-passwords')">
+                            <li><a href="#" onclick="showSection('view-passwords', this)">
                                 <i class="fas fa-key"></i> View Passwords
                             </a></li>
-                            <li><a href="#" onclick="showSection('profile')">
+                            <li><a href="#" onclick="showSection('profile', this)">
                                 <i class="fas fa-user"></i> Profile
                             </a></li>
                         </ul>
@@ -673,784 +673,275 @@
         <i class="fas fa-vial"></i> Load Demo Data
     </button>
 
-    <script>
-    // Database simulation using Local Storage
-    class Database {
-        constructor() {
-            this.usersKey = 'passwordManager_users';
-            this.passwordsKey = 'passwordManager_passwords';
-            this.currentUserKey = 'passwordManager_currentUser';
-        }
+<script>
+const API = "http://localhost:3000/api";
 
-        // User Management
-        saveUser(user) {
-            const users = this.getAllUsers();
-            users.push(user);
-            localStorage.setItem(this.usersKey, JSON.stringify(users));
-            return user;
-        }
+let authToken = "";
+let passwordsList = [];
+let signupChart = null;
+let addChart = null;
 
-        getUserByEmail(email) {
-            const users = this.getAllUsers();
-            return users.find(user => user.email === email);
-        }
+/* ---------- PAGE & SECTION ---------- */
 
-        getAllUsers() {
-            const users = JSON.parse(localStorage.getItem(this.usersKey)) || [];
-            return users;
-        }
+function showPage(pageId) {
+  document.querySelectorAll(".auth-container, #dashboard")
+    .forEach(el => el.classList.add("hidden"));
+  document.getElementById(pageId).classList.remove("hidden");
+}
 
-        // Password Management
-        savePassword(password) {
-            const passwords = this.getAllPasswords();
-            password.id = Date.now().toString();
-            password.createdAt = new Date().toISOString();
-            passwords.push(password);
-            localStorage.setItem(this.passwordsKey, JSON.stringify(passwords));
-            return password;
-        }
+function showSection(sectionId, clickedLink) {
+  document.querySelectorAll(".section").forEach(sec => {
+    sec.classList.add("hidden");
+  });
 
-        getPasswordsByUser(userId) {
-            const passwords = this.getAllPasswords();
-            return passwords.filter(p => p.userId === userId);
-        }
+  document.getElementById(sectionId).classList.remove("hidden");
 
-        updatePassword(id, updatedData) {
-            const passwords = this.getAllPasswords();
-            const index = passwords.findIndex(p => p.id === id);
-            if (index !== -1) {
-                passwords[index] = { ...passwords[index], ...updatedData };
-                localStorage.setItem(this.passwordsKey, JSON.stringify(passwords));
-                return passwords[index];
-            }
-            return null;
-        }
+  document.querySelectorAll(".sidebar-menu a").forEach(a => {
+    a.classList.remove("active");
+  });
 
-        deletePassword(id) {
-            const passwords = this.getAllPasswords();
-            const filtered = passwords.filter(p => p.id !== id);
-            localStorage.setItem(this.passwordsKey, JSON.stringify(filtered));
-            return true;
-        }
+  if (clickedLink) {
+    clickedLink.classList.add("active");
+  }
 
-        getAllPasswords() {
-            const passwords = JSON.parse(localStorage.getItem(this.passwordsKey)) || [];
-            return passwords;
-        }
+  if (sectionId === "view-passwords") {
+    loadPasswords();
+  }
+}
 
-        // Session Management
-        setCurrentUser(user) {
-            localStorage.setItem(this.currentUserKey, JSON.stringify(user));
-        }
+function togglePassword(inputId) {
+  const input = document.getElementById(inputId);
 
-        getCurrentUser() {
-            return JSON.parse(localStorage.getItem(this.currentUserKey));
-        }
+  if (input.type === "password") {
+    input.type = "text";
+  } else {
+    input.type = "password";
+  }
+}
 
-        clearCurrentUser() {
-            localStorage.removeItem(this.currentUserKey);
-        }
 
-        // Clear all data (for testing)
-        clearAll() {
-            localStorage.removeItem(this.usersKey);
-            localStorage.removeItem(this.passwordsKey);
-            localStorage.removeItem(this.currentUserKey);
-        }
-    }
 
-    // Password encryption/decryption
-    const encrypt = (text) => {
-        return btoa(text);
-    };
+/* ---------- AUTH ---------- */
 
-    const decrypt = (encryptedText) => {
-        return atob(encryptedText);
-    };
+document.getElementById("signup-form").addEventListener("submit", async e => {
+  e.preventDefault();
 
-    // Initialize database
-    const db = new Database();
+  const res = await fetch(API + "/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: document.getElementById("signup-name").value,
+      email: document.getElementById("signup-email").value,
+      password: document.getElementById("signup-password").value
+    })
+  });
 
-    // Current state
-    let currentUser = null;
-    let passwords = [];
+  const data = await res.json();
+  if (!data.success) return alert(data.message);
 
-    // Chart instances
-    let passwordChart = null;
-    let newPasswordChart = null;
+  alert("Signup successful. Login now.");
+  showPage("login-page");
+});
 
-    // Show specific page
-    function showPage(pageId) {
-        document.querySelectorAll('.auth-container, #dashboard').forEach(el => {
-            el.classList.add('hidden');
-        });
-        document.getElementById(pageId).classList.remove('hidden');
-        
-        // Show/hide demo button
-        if (pageId === 'login-page' || pageId === 'signup-page') {
-            document.getElementById('demo-btn').classList.remove('hidden');
-        } else {
-            document.getElementById('demo-btn').classList.add('hidden');
-        }
-    }
+document.getElementById("login-form").addEventListener("submit", async e => {
+  e.preventDefault();
 
-    // Show specific section in dashboard
-    function showSection(sectionId) {
-        document.querySelectorAll('.section').forEach(el => {
-            el.classList.add('hidden');
-        });
-        document.getElementById(sectionId).classList.remove('hidden');
-        
-        // Update active menu
-        document.querySelectorAll('.sidebar-menu a').forEach(a => {
-            a.classList.remove('active');
-        });
-        event.target.closest('a').classList.add('active');
-        
-        // Load passwords if viewing passwords section
-        if (sectionId === 'view-passwords') {
-            loadPasswords();
-        }
-    }
+  const res = await fetch(API + "/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: document.getElementById("login-email").value,
+      password: document.getElementById("login-password").value
+    })
+  });
 
-    // Toggle password visibility in input fields
-    function togglePassword(inputId) {
-        const input = document.getElementById(inputId);
-        const icon = input.nextElementSibling.querySelector('i');
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
-        }
-    }
+  const data = await res.json();
+  if (!data.success) return alert(data.message);
 
-    // Analyze password strength
-    function analyzePassword(password) {
-        const analysis = {
-            uppercase: (password.match(/[A-Z]/g) || []).length,
-            lowercase: (password.match(/[a-z]/g) || []).length,
-            numbers: (password.match(/[0-9]/g) || []).length,
-            symbols: (password.match(/[^A-Za-z0-9]/g) || []).length
-        };
-        
-        let strength = 0;
-        if (password.length >= 8) strength++;
-        if (analysis.uppercase > 0) strength++;
-        if (analysis.lowercase > 0) strength++;
-        if (analysis.numbers > 0) strength++;
-        if (analysis.symbols > 0) strength++;
-        if (password.length >= 12) strength++;
-        
-        return { analysis, strength };
-    }
+  authToken = data.token;
+  document.getElementById("user-name").innerText = data.user.name;
+  document.getElementById("profile-email").value = data.user.email;
 
-    // Update password strength display
-    function updatePasswordStrength(password, fillId, textId, chartId, chartInstance) {
-        const { analysis, strength } = analyzePassword(password);
-        const strengthFill = document.getElementById(fillId);
-        const strengthText = document.getElementById(textId);
-        
-        let strengthPercentage = (strength / 6) * 100;
-        let strengthLabel = 'Very Weak';
-        let color = '#f72585';
-        
-        if (strengthPercentage >= 80) {
-            strengthLabel = 'Very Strong';
-            color = '#4cc9f0';
-        } else if (strengthPercentage >= 60) {
-            strengthLabel = 'Strong';
-            color = '#4361ee';
-        } else if (strengthPercentage >= 40) {
-            strengthLabel = 'Good';
-            color = '#f8961e';
-        } else if (strengthPercentage >= 20) {
-            strengthLabel = 'Weak';
-            color = '#f8961e';
-        }
-        
-        strengthFill.style.width = `${strengthPercentage}%`;
-        strengthFill.style.background = color;
-        strengthText.textContent = `Password strength: ${strengthLabel}`;
-        strengthText.style.color = color;
-        
-        // Update chart if password is not empty
-        if (password.trim()) {
-            const ctx = document.getElementById(chartId).getContext('2d');
-            if (chartInstance) {
-                chartInstance.destroy();
-            }
-            
-            chartInstance = new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    labels: ['Uppercase', 'Lowercase', 'Numbers', 'Symbols'],
-                    datasets: [{
-                        data: [
-                            analysis.uppercase,
-                            analysis.lowercase,
-                            analysis.numbers,
-                            analysis.symbols
-                        ],
-                        backgroundColor: [
-                            '#4361ee',
-                            '#4cc9f0',
-                            '#f8961e',
-                            '#f72585'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-        }
-        
-        return chartInstance;
-    }
+  showPage("dashboard");
+  showSection("view-passwords"); 
+});
 
-    // Generate strong password
-    function generatePassword() {
-        const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
-        let password = '';
-        for (let i = 0; i < 16; i++) {
-            password += charset.charAt(Math.floor(Math.random() * charset.length));
-        }
-        
-        const passwordInput = document.getElementById('new-password');
-        passwordInput.value = password;
-        passwordInput.type = 'text';
-        
-        newPasswordChart = updatePasswordStrength(
-            password,
-            'new-strength-fill',
-            'new-strength-text',
-            'new-password-chart',
-            newPasswordChart
-        );
-    }
+/* ---------- PASSWORD CRUD ---------- */
 
-    // Copy to clipboard
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            alert('Password copied to clipboard!');
-        });
-    }
+document.getElementById("add-password-form").addEventListener("submit", async e => {
+  e.preventDefault();
 
-    // Show edit modal
-    function showEditModal(password) {
-        document.getElementById('edit-id').value = password.id;
-        document.getElementById('edit-website').value = password.website;
-        document.getElementById('edit-username').value = password.username;
-        document.getElementById('edit-password').value = decrypt(password.encryptedPassword);
-        document.getElementById('edit-notes').value = password.notes || '';
-        document.getElementById('edit-modal').classList.remove('hidden');
-    }
+  const res = await fetch(API + "/passwords", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + authToken
+    },
+    body: JSON.stringify({
+      website: document.getElementById("website").value,
+      username: document.getElementById("username").value,
+      password: document.getElementById("new-password").value,
+      notes: document.getElementById("notes").value
+    })
+  });
 
-    // Close modal
-    function closeModal() {
-        document.getElementById('edit-modal').classList.add('hidden');
-    }
+  const data = await res.json();
+  if (!data.success) return alert(data.message);
 
-    // Search passwords
-    function searchPasswords() {
-        const searchTerm = document.getElementById('search-passwords').value.toLowerCase();
-        const filtered = passwords.filter(p => 
-            p.website.toLowerCase().includes(searchTerm) ||
-            p.username.toLowerCase().includes(searchTerm) ||
-            (p.notes && p.notes.toLowerCase().includes(searchTerm))
-        );
-        displayPasswords(filtered);
-    }
+  alert("Password saved");
+  e.target.reset();
+  loadPasswords();
+});
 
-    // Display passwords
-    function displayPasswords(passwordList) {
-        const container = document.getElementById('passwords-container');
-        if (passwordList.length === 0) {
-            container.innerHTML = '<p style="text-align: center; padding: 40px; color: var(--gray);">No passwords saved yet. Click "Add Password" to get started.</p>';
-            return;
-        }
-        
-        container.innerHTML = passwordList.map(password => {
-            const safePasswordId = password.id.replace(/[^a-zA-Z0-9]/g, '_');
-            
-            return `
-            <div class="password-card" id="card-${safePasswordId}">
-                <div class="password-header">
-                    <h3>${password.website}</h3>
-                    <div class="password-actions">
-                        <button class="action-btn copy-btn" onclick="copyPasswordToClipboard('${password.id}')" title="Copy Password">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                        <button class="action-btn edit-btn" onclick="showEditModal(${JSON.stringify(password).replace(/"/g, '&quot;')})" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="action-btn delete-btn" onclick="deletePassword('${password.id}')" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-                <p><strong>Username:</strong> ${password.username}</p>
-                <p><strong>Password:</strong> <span class="password-hidden" id="password-display-${safePasswordId}">••••••••</span></p>
-                <button onclick="toggleViewPassword('${password.id}', this)" class="btn btn-secondary show-password-btn" style="margin-top: 10px; padding: 8px 16px; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-eye"></i>
-                    <span>Show Password</span>
-                </button>
-                ${password.notes ? `<p style="margin-top: 10px;"><strong>Notes:</strong> ${password.notes}</p>` : ''}
-                <p class="text-muted"><small>Created: ${new Date(password.createdAt).toLocaleDateString()}</small></p>
-            </div>
-            `;
-        }).join('');
-    }
+async function loadPasswords() {
+  if (!authToken) return;
 
-    // Toggle password view for saved passwords - FIXED VERSION
-    function toggleViewPassword(passwordId, button) {
-        const passwordObj = passwords.find(p => p.id === passwordId);
-        if (!passwordObj) return;
-        
-        const safePasswordId = passwordId.replace(/[^a-zA-Z0-9]/g, '_');
-        const passwordElement = document.getElementById(`password-display-${safePasswordId}`);
-        const icon = button.querySelector('i');
-        const textSpan = button.querySelector('span');
-        
-        if (passwordElement.classList.contains('password-hidden')) {
-            // Show the password
-            passwordElement.textContent = decrypt(passwordObj.encryptedPassword);
-            passwordElement.classList.remove('password-hidden');
-            passwordElement.classList.add('password-visible');
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-            textSpan.textContent = 'Hide Password';
-            
-            // Auto hide after 10 seconds
-            setTimeout(() => {
-                if (passwordElement.classList.contains('password-visible')) {
-                    passwordElement.textContent = '••••••••';
-                    passwordElement.classList.remove('password-visible');
-                    passwordElement.classList.add('password-hidden');
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
-                    textSpan.textContent = 'Show Password';
-                }
-            }, 10000);
-        } else {
-            // Hide the password
-            passwordElement.textContent = '••••••••';
-            passwordElement.classList.remove('password-visible');
-            passwordElement.classList.add('password-hidden');
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
-            textSpan.textContent = 'Show Password';
-        }
-    }
+  const res = await fetch(API + "/passwords", {
+    headers: { Authorization: "Bearer " + authToken }
+  });
 
-    // Copy password to clipboard
-    function copyPasswordToClipboard(passwordId) {
-        const passwordObj = passwords.find(p => p.id === passwordId);
-        if (passwordObj) {
-            const decryptedPassword = decrypt(passwordObj.encryptedPassword);
-            copyToClipboard(decryptedPassword);
-        }
-    }
+  const data = await res.json();
+  if (!data.success) {
+    alert(data.message || "Failed to load passwords");
+    return;
+  }
 
-    // Load passwords
-    function loadPasswords() {
-        if (currentUser) {
-            passwords = db.getPasswordsByUser(currentUser.id);
-            displayPasswords(passwords);
-        }
-    }
+  passwordsList = data.passwords || [];
+  renderPasswords();
+}
 
-    // Login function
-    document.getElementById('login-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const email = document.getElementById('login-email').value.trim();
-        const password = document.getElementById('login-password').value;
-        
-        if (!email || !password) {
-            alert('Please enter both email and password');
-            return;
-        }
-        
-        // Find user
-        const user = db.getUserByEmail(email);
-        
-        if (!user) {
-            alert('User not found. Please sign up first.');
-            return;
-        }
-        
-        // Check password
-        if (user.password !== password) {
-            alert('Invalid password. Please try again.');
-            return;
-        }
-        
-        // Set current user
-        currentUser = user;
-        db.setCurrentUser(user);
-        showDashboard();
-    });
 
-    // Signup function
-    document.getElementById('signup-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const name = document.getElementById('signup-name').value.trim();
-        const email = document.getElementById('signup-email').value.trim();
-        const password = document.getElementById('signup-password').value;
-        const confirmPassword = document.getElementById('confirm-password').value;
-        
-        // Validation
-        if (!name || !email || !password) {
-            alert('All fields are required');
-            return;
-        }
-        
-        if (password !== confirmPassword) {
-            alert('Passwords do not match');
-            return;
-        }
-        
-        if (password.length < 6) {
-            alert('Password must be at least 6 characters long');
-            return;
-        }
-        
-        // Check if user already exists
-        const existingUser = db.getUserByEmail(email);
-        if (existingUser) {
-            alert('Email already registered. Please login instead.');
-            return;
-        }
-        
-        // Create user object
-        const user = {
-            id: Date.now().toString(),
-            name: name,
-            email: email,
-            password: password,
-            createdAt: new Date().toISOString()
-        };
-        
-        // Save user
-        db.saveUser(user);
-        
-        alert('Account created successfully! Please login.');
-        showPage('login-page');
-        
-        // Clear form
-        this.reset();
-    });
+function renderPasswords() {
+  const box = document.getElementById("passwords-container");
+  box.innerHTML = "";
 
-    // Show dashboard
-    function showDashboard() {
-        const user = db.getCurrentUser();
-        if (user) {
-            document.getElementById('user-name').textContent = user.name;
-            document.getElementById('profile-email').value = user.email;
-            currentUser = user;
-        }
-        showPage('dashboard');
-        showSection('add-password');
-    }
+  passwordsList.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "password-card";
+    card.innerHTML = `
+      <h3>${p.website}</h3>
+      <p><b>User:</b> ${p.username}</p>
+      <p><b>Password:</b> ******</p>
+      <button onclick="copyPassword('${p.password}')">Copy</button>
+      <button onclick="openEdit('${p._id}')">Edit</button>
+      <button onclick="deletePassword('${p._id}')">Delete</button>
+    `;
+    box.appendChild(card);
+  });
+}
 
-    // LOGOUT FUNCTION
-    function logout() {
-        if (confirm('Are you sure you want to sign out?')) {
-            // Clear current session
-            db.clearCurrentUser();
-            currentUser = null;
-            passwords = [];
-            
-            // Reset all forms
-            document.getElementById('login-form').reset();
-            document.getElementById('signup-form').reset();
-            document.getElementById('add-password-form').reset();
-            document.getElementById('profile-form').reset();
-            
-            // Reset charts
-            if (passwordChart) {
-                passwordChart.destroy();
-                passwordChart = null;
-            }
-            if (newPasswordChart) {
-                newPasswordChart.destroy();
-                newPasswordChart = null;
-            }
-            
-            // Reset strength meters
-            document.getElementById('strength-fill').style.width = '0%';
-            document.getElementById('strength-text').textContent = 'Password strength: Very Weak';
-            document.getElementById('strength-text').style.color = '#f72585';
-            document.getElementById('new-strength-fill').style.width = '0%';
-            document.getElementById('new-strength-text').textContent = 'Password strength: Very Weak';
-            document.getElementById('new-strength-text').style.color = '#f72585';
-            
-            // Show login page
-            showPage('login-page');
-            
-            alert('You have been signed out successfully!');
-        }
-    }
+function copyPassword(text) {
+  navigator.clipboard.writeText(text);
+  alert("Copied");
+}
 
-    // Add password form
-    document.getElementById('add-password-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        if (!currentUser) {
-            alert('Please login first');
-            return;
-        }
-        
-        const website = document.getElementById('website').value.trim();
-        const username = document.getElementById('username').value.trim();
-        const password = document.getElementById('new-password').value;
-        const notes = document.getElementById('notes').value.trim();
-        
-        if (!website || !username || !password) {
-            alert('Website, username, and password are required');
-            return;
-        }
-        
-        // Create password object
-        const passwordObj = {
-            id: Date.now().toString(),
-            userId: currentUser.id,
-            website: website,
-            username: username,
-            encryptedPassword: encrypt(password),
-            notes: notes,
-            createdAt: new Date().toISOString()
-        };
-        
-        // Save password
-        db.savePassword(passwordObj);
-        
-        alert('Password saved successfully!');
-        
-        // Reset form
-        this.reset();
-        
-        // Reset strength meter
-        if (newPasswordChart) {
-            newPasswordChart.destroy();
-            newPasswordChart = null;
-        }
-        document.getElementById('new-strength-fill').style.width = '0%';
-        document.getElementById('new-strength-text').textContent = 'Password strength: Very Weak';
-        document.getElementById('new-strength-text').style.color = '#f72585';
-        
-        // Load passwords if on view page
-        loadPasswords();
-    });
+async function deletePassword(id) {
+  if (!confirm("Delete?")) return;
 
-    // Edit password form
-    document.getElementById('edit-password-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const id = document.getElementById('edit-id').value;
-        const website = document.getElementById('edit-website').value.trim();
-        const username = document.getElementById('edit-username').value.trim();
-        const password = document.getElementById('edit-password').value;
-        const notes = document.getElementById('edit-notes').value.trim();
-        
-        if (!website || !username || !password) {
-            alert('All fields are required');
-            return;
-        }
-        
-        // Update password
-        const updated = db.updatePassword(id, {
-            website: website,
-            username: username,
-            encryptedPassword: encrypt(password),
-            notes: notes
-        });
-        
-        if (updated) {
-            alert('Password updated successfully!');
-            closeModal();
-            loadPasswords();
-        } else {
-            alert('Failed to update password');
-        }
-    });
+  await fetch(API + "/passwords/" + id, {
+    method: "DELETE",
+    headers: { Authorization: "Bearer " + authToken }
+  });
 
-    // Delete password
-    function deletePassword(id) {
-        if (!confirm('Are you sure you want to delete this password?')) return;
-        
-        const success = db.deletePassword(id);
-        if (success) {
-            alert('Password deleted successfully!');
-            loadPasswords();
-        } else {
-            alert('Failed to delete password');
-        }
-    }
+  loadPasswords();
+}
 
-    // Profile form
-    document.getElementById('profile-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const currentPassword = document.getElementById('current-password').value;
-        const newPassword = document.getElementById('new-master-password').value;
-        
-        if (!currentPassword || !newPassword) {
-            alert('Please fill in both password fields');
-            return;
-        }
-        
-        if (currentUser.password !== currentPassword) {
-            alert('Current password is incorrect');
-            return;
-        }
-        
-        // Update user password
-        currentUser.password = newPassword;
-        
-        // Update in database
-        const users = db.getAllUsers();
-        const userIndex = users.findIndex(u => u.id === currentUser.id);
-        if (userIndex !== -1) {
-            users[userIndex].password = newPassword;
-            localStorage.setItem('passwordManager_users', JSON.stringify(users));
-            db.setCurrentUser(currentUser);
-        }
-        
-        alert('Password changed successfully!');
-        this.reset();
-    });
+/* ---------- EDIT ---------- */
 
-    // Event listeners for password strength analysis
-    document.getElementById('signup-password').addEventListener('input', function(e) {
-        passwordChart = updatePasswordStrength(
-            e.target.value,
-            'strength-fill',
-            'strength-text',
-            'password-chart',
-            passwordChart
-        );
-    });
+function openEdit(id) {
+  const p = passwordsList.find(x => x._id === id);
+  document.getElementById("edit-id").value = id;
+  document.getElementById("edit-website").value = p.website;
+  document.getElementById("edit-username").value = p.username;
+  document.getElementById("edit-password").value = p.password;
+  document.getElementById("edit-notes").value = p.notes || "";
+  document.getElementById("edit-modal").classList.remove("hidden");
+}
 
-    document.getElementById('new-password').addEventListener('input', function(e) {
-        newPasswordChart = updatePasswordStrength(
-            e.target.value,
-            'new-strength-fill',
-            'new-strength-text',
-            'new-password-chart',
-            newPasswordChart
-        );
-    });
+function closeModal() {
+  document.getElementById("edit-modal").classList.add("hidden");
+}
 
-    // Load demo data for testing
-    function loadDemoData() {
-        if (confirm('This will load demo user and passwords for testing. Continue?')) {
-            // Clear existing data
-            db.clearAll();
-            
-            // Create demo user
-            const demoUser = {
-                id: 'demo123',
-                name: 'Demo User',
-                email: 'demo@example.com',
-                password: 'demo123',
-                createdAt: new Date().toISOString()
-            };
-            db.saveUser(demoUser);
-            
-            // Create demo passwords
-            const demoPasswords = [
-                {
-                    id: '1',
-                    userId: 'demo123',
-                    website: 'Gmail',
-                    username: 'demo@gmail.com',
-                    encryptedPassword: encrypt('DemoPass123!'),
-                    notes: 'Personal email account',
-                    createdAt: new Date().toISOString()
-                },
-                {
-                    id: '2',
-                    userId: 'demo123',
-                    website: 'Facebook',
-                    username: 'demo_user',
-                    encryptedPassword: encrypt('FbDemo456@'),
-                    notes: 'Social media account',
-                    createdAt: new Date().toISOString()
-                },
-                {
-                    id: '3',
-                    userId: 'demo123',
-                    website: 'GitHub',
-                    username: 'demo-dev',
-                    encryptedPassword: encrypt('GitHub789#'),
-                    notes: 'Developer account',
-                    createdAt: new Date().toISOString()
-                }
-            ];
-            
-            demoPasswords.forEach(pwd => db.savePassword(pwd));
-            
-            // Auto login with demo account
-            currentUser = demoUser;
-            db.setCurrentUser(demoUser);
-            showDashboard();
-            
-            alert('Demo data loaded! Login with:\nEmail: demo@example.com\nPassword: demo123');
-        }
-    }
+document.getElementById("edit-password-form").addEventListener("submit", async e => {
+  e.preventDefault();
 
-    // Initialize the app
-    window.addEventListener('DOMContentLoaded', () => {
-        // Load Font Awesome
-        const faScript = document.createElement('script');
-        faScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js';
-        faScript.crossOrigin = 'anonymous';
-        document.head.appendChild(faScript);
-        
-        // Setup demo button
-        document.getElementById('demo-btn').addEventListener('click', loadDemoData);
-        
-        // Check if user is logged in
-        const user = db.getCurrentUser();
-        if (user) {
-            currentUser = user;
-            showDashboard();
-        } else {
-            showPage('login-page');
-        }
-        
-        // Add CSS for password visibility
-        const style = document.createElement('style');
-        style.textContent = `
-            .password-hidden {
-                font-family: monospace;
-                letter-spacing: 2px;
-                color: var(--dark);
-            }
-            .password-visible {
-                font-family: monospace;
-                color: var(--success);
-                background: rgba(76, 201, 240, 0.1);
-                padding: 2px 6px;
-                border-radius: 4px;
-                border: 1px solid var(--success);
-            }
-        `;
-        document.head.appendChild(style);
-    });
+  await fetch(API + "/passwords/" + document.getElementById("edit-id").value, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + authToken
+    },
+    body: JSON.stringify({
+      website: document.getElementById("edit-website").value,
+      username: document.getElementById("edit-username").value,
+      password: document.getElementById("edit-password").value,
+      notes: document.getElementById("edit-notes").value
+    })
+  });
+
+  closeModal();
+  loadPasswords();
+});
+
+/* ---------- PASSWORD STRENGTH ---------- */
+
+function analyze(pwd) {
+  return [
+    (pwd.match(/[A-Z]/g)||[]).length,
+    (pwd.match(/[a-z]/g)||[]).length,
+    (pwd.match(/[0-9]/g)||[]).length,
+    (pwd.match(/[^A-Za-z0-9]/g)||[]).length
+  ];
+}
+
+function draw(canvasId, pwd, chart) {
+  const ctx = document.getElementById(canvasId).getContext("2d");
+  if (chart) chart.destroy();
+  return new Chart(ctx,{
+    type:"pie",
+    data:{labels:["Upper","Lower","Number","Symbol"],datasets:[{data:analyze(pwd)}]}
+  });
+}
+
+document.getElementById("signup-password").addEventListener("input", e=>{
+  signupChart = draw("password-chart", e.target.value, signupChart);
+});
+
+document.getElementById("new-password").addEventListener("input", e=>{
+  addChart = draw("new-password-chart", e.target.value, addChart);
+});
+
+function generatePassword() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+  let pwd = "";
+
+  for (let i = 0; i < 16; i++) {
+    pwd += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  const input = document.getElementById("new-password");
+  input.value = pwd;
+
+  // IMPORTANT: keep it as password type
+  input.type = "password";
+
+  // force chart update
+  addChart = draw("new-password-chart", pwd, addChart);
+}
+
+
+/* ---------- LOGOUT ---------- */
+
+function logout() {
+  authToken = "";
+  passwordsList = [];
+  showPage("login-page");
+}
 </script>
+
+
+
+
 </body>
 </html>
 
