@@ -221,6 +221,70 @@
             gap: 10px;
         }
 
+        .nav-icon {
+            width: 22px;
+            height: 22px;
+            stroke: currentColor;
+            stroke-width: 2;
+            color: white;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #signout-btn {
+            background: linear-gradient(135deg, var(--danger) 0%, #ff006e 100%);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 8px rgba(247, 37, 133, 0.3);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #signout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(247, 37, 133, 0.4);
+        }
+
+        #signout-btn:active {
+            transform: translateY(0);
+        }
+
+        #signout-btn .nav-icon {
+            stroke: white;
+            color: white;
+            width: 18px;
+            height: 18px;
+        }
+
+        #signout-btn:hover .nav-icon {
+            stroke: white;
+            color: white;
+        }
+
+        .nav-icon {
+            width: 22px;
+            height: 22px;
+            stroke: currentColor;
+            stroke-width: 2;
+            color: white;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #signout-btn .nav-icon {
+            stroke: var(--danger);
+        }
+
         .main-content {
             padding: 30px;
             display: grid;
@@ -689,11 +753,19 @@
                     </div>
                     <div class="nav-links">
                         <div class="user-info">
-                            <i class="fas fa-user-circle"></i>
+                            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
                             <span id="user-name">User</span>
                         </div>
                         <button class="btn btn-outline" onclick="logout()" id="signout-btn">
-                            <i class="fas fa-sign-out-alt"></i> Sign Out
+                            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                <polyline points="16 17 21 12 16 7"></polyline>
+                                <line x1="21" y1="12" x2="9" y2="12"></line>
+                            </svg>
+                            Sign Out
                         </button>
                     </div>
                 </nav>
