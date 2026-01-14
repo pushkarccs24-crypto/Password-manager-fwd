@@ -323,6 +323,24 @@
             padding: 20px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             border: 1px solid #e0e0e0;
+            transition: var(--transition);
+        }
+
+        .password-card:hover {
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .password-card h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.2rem;
+            color: var(--secondary);
+        }
+
+        .password-card p {
+            margin: 8px 0;
+            color: #555;
+            word-break: break-all;
         }
 
         .password-header {
@@ -335,6 +353,8 @@
         .password-actions {
             display: flex;
             gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
         }
 
         .action-btn {
@@ -343,6 +363,81 @@
             cursor: pointer;
             font-size: 1.1rem;
             padding: 5px;
+        }
+
+        .btn-copy {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-copy:hover {
+            background: #38a7d1;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(76, 201, 240, 0.3);
+        }
+
+        .btn-copy:active {
+            transform: translateY(0);
+        }
+
+        .btn-edit {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-edit:hover {
+            background: #3350d4;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(67, 97, 238, 0.3);
+        }
+
+        .btn-edit:active {
+            transform: translateY(0);
+        }
+
+        .btn-delete {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-delete:hover {
+            background: #e91f5f;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(247, 37, 133, 0.3);
+        }
+
+        .btn-delete:active {
+            transform: translateY(0);
             border-radius: 4px;
             transition: var(--transition);
         }
@@ -469,6 +564,70 @@
                 </form>
                 <p class="text-center mt-3">
                     Don't have an account? <span class="link" onclick="showPage('signup-page')">Sign Up</span>
+                </p>
+                <p class="text-center mt-2">
+                    Forgot your password? <span class="link" onclick="showPage('forgot-password-page')">Reset it</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Forgot Password Page -->
+        <div id="forgot-password-page" class="auth-container hidden">
+            <div class="auth-card">
+                <div class="logo">
+                    <i class="fas fa-key"></i>
+                    <h1>Reset Password</h1>
+                </div>
+                <p style="text-align: center; color: #6c757d; margin-bottom: 20px;">
+                    Enter your email address and we'll send you a link to reset your password.
+                </p>
+                <form id="forgot-password-form">
+                    <div class="form-group">
+                        <label for="forgot-email">Email</label>
+                        <input type="email" id="forgot-email" placeholder="Enter your email" required>
+                        <div class="error" id="forgot-email-error"></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Send Reset Link</button>
+                </form>
+                <p class="text-center mt-3">
+                    Remember your password? <span class="link" onclick="showPage('login-page')">Sign In</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Reset Password Page -->
+        <div id="reset-password-page" class="auth-container hidden">
+            <div class="auth-card">
+                <div class="logo">
+                    <i class="fas fa-lock"></i>
+                    <h1>Create New Password</h1>
+                </div>
+                <form id="reset-password-form">
+                    <input type="hidden" id="reset-token" />
+                    <div class="form-group">
+                        <label for="reset-password">New Password</label>
+                        <div class="password-container">
+                            <input type="password" id="reset-password" placeholder="Enter your new password" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword('reset-password')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="error" id="reset-password-error"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="reset-confirm-password">Confirm Password</label>
+                        <div class="password-container">
+                            <input type="password" id="reset-confirm-password" placeholder="Confirm your new password" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword('reset-confirm-password')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="error" id="reset-confirm-password-error"></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Reset Password</button>
+                </form>
+                <p class="text-center mt-3">
+                    <span class="link" onclick="showPage('login-page')">Back to Sign In</span>
                 </p>
             </div>
         </div>
@@ -719,9 +878,27 @@ function togglePassword(inputId) {
   }
 }
 
+// Initialize app - Check URL parameters for reset token
+function initializeApp() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const page = urlParams.get('page');
+  const resetToken = urlParams.get('token');
+
+  if (page === 'reset-password' && resetToken) {
+    document.getElementById("reset-token").value = resetToken;
+    showPage('reset-password-page');
+  } else if (authToken) {
+    showPage('dashboard');
+    showSection('view-passwords');
+  } else {
+    showPage('login-page');
+  }
+}
+
+// Run initialization when page loads
+window.addEventListener('load', initializeApp);
 
 
-/* ---------- AUTH ---------- */
 
 document.getElementById("signup-form").addEventListener("submit", async e => {
   e.preventDefault();
@@ -764,6 +941,59 @@ document.getElementById("login-form").addEventListener("submit", async e => {
 
   showPage("dashboard");
   showSection("view-passwords"); 
+});
+
+// Forgot Password Form
+document.getElementById("forgot-password-form").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const email = document.getElementById("forgot-email").value;
+
+  const res = await fetch(API + "/auth/forgot-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email })
+  });
+
+  const data = await res.json();
+  if (!data.success) return alert(data.message);
+
+  alert(data.message);
+  showPage("login-page");
+  document.getElementById("forgot-password-form").reset();
+});
+
+// Reset Password Form
+document.getElementById("reset-password-form").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const newPassword = document.getElementById("reset-password").value;
+  const confirmPassword = document.getElementById("reset-confirm-password").value;
+  const token = document.getElementById("reset-token").value;
+
+  if (newPassword !== confirmPassword) {
+    return alert("Passwords do not match");
+  }
+
+  if (newPassword.length < 6) {
+    return alert("Password must be at least 6 characters");
+  }
+
+  const res = await fetch(API + "/auth/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      token,
+      newPassword
+    })
+  });
+
+  const data = await res.json();
+  if (!data.success) return alert(data.message);
+
+  alert(data.message);
+  showPage("login-page");
+  document.getElementById("reset-password-form").reset();
 });
 
 /* ---------- PASSWORD CRUD ---------- */
@@ -822,9 +1052,17 @@ function renderPasswords() {
       <h3>${p.website}</h3>
       <p><b>User:</b> ${p.username}</p>
       <p><b>Password:</b> ******</p>
-      <button onclick="copyPassword('${p.password}')">Copy</button>
-      <button onclick="openEdit('${p._id}')">Edit</button>
-      <button onclick="deletePassword('${p._id}')">Delete</button>
+      <div class="password-actions">
+        <button class="btn-copy" onclick="copyPassword('${p.password}')">
+          <i class="fas fa-copy"></i> Copy
+        </button>
+        <button class="btn-edit" onclick="openEdit('${p._id}')">
+          <i class="fas fa-edit"></i> Edit
+        </button>
+        <button class="btn-delete" onclick="deletePassword('${p._id}')">
+          <i class="fas fa-trash"></i> Delete
+        </button>
+      </div>
     `;
     box.appendChild(card);
   });
@@ -838,10 +1076,17 @@ function copyPassword(text) {
 async function deletePassword(id) {
   if (!confirm("Delete?")) return;
 
-  await fetch(API + "/passwords/" + id, {
+  const res = await fetch(API + "/passwords/" + id, {
     method: "DELETE",
     headers: { Authorization: "Bearer " + authToken }
   });
+
+  const data = await res.json();
+  if (data.success) {
+    alert("Password deleted successfully");
+  } else {
+    alert(data.message || "Failed to delete password");
+  }
 
   loadPasswords();
 }
@@ -865,7 +1110,7 @@ function closeModal() {
 document.getElementById("edit-password-form").addEventListener("submit", async e => {
   e.preventDefault();
 
-  await fetch(API + "/passwords/" + document.getElementById("edit-id").value, {
+  const res = await fetch(API + "/passwords/" + document.getElementById("edit-id").value, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -879,8 +1124,50 @@ document.getElementById("edit-password-form").addEventListener("submit", async e
     })
   });
 
-  closeModal();
-  loadPasswords();
+  const data = await res.json();
+  if (data.success) {
+    alert("Password updated successfully");
+    closeModal();
+    loadPasswords();
+  } else {
+    alert(data.message || "Failed to update password");
+  }
+});
+
+// Profile password change
+document.getElementById("profile-form").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const currentPassword = document.getElementById("current-password").value;
+  const newPassword = document.getElementById("new-master-password").value;
+
+  if (!currentPassword || !newPassword) {
+    return alert("Both password fields are required");
+  }
+
+  if (newPassword.length < 6) {
+    return alert("New password must be at least 6 characters");
+  }
+
+  const res = await fetch(API + "/auth/change-password", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + authToken
+    },
+    body: JSON.stringify({
+      currentPassword,
+      newPassword
+    })
+  });
+
+  const data = await res.json();
+  if (!data.success) {
+    return alert(data.message);
+  }
+
+  alert(data.message || "Password changed successfully");
+  document.getElementById("profile-form").reset();
 });
 
 /* ---------- PASSWORD STRENGTH ---------- */
